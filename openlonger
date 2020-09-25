@@ -1,0 +1,4 @@
+#! /usr/local/bin/bash
+mkdir /tmp/openlonger 2> /dev/null
+cp "$1" /tmp/openlonger
+open /tmp/openlonger/"${1##*/}"

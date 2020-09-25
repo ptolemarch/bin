@@ -1,0 +1,60 @@
+#! /bin/perl
+use 5.010;
+use warnings;
+use strict;
+use autodie;
+
+my %root = (
+    usr => {
+        local => {
+            bin => {}, sbin => {}, games => {},
+            lib => {}, libexec => {}, include => {},
+            etc => {}, var => {}, tmp => {}, src => {},
+            share => {
+                man => {
+                    man1 => {}, man2 => {}, man3 => {}, man4 => {},
+                    man5 => {}, man6 => {}, man7 => {}, man8 => {},
+                    man9 => {}, mann => {},
+                },
+                info => {},
+                doc => {},
+            },
+            man => 'share/man', info => 'share/info', doc => 'share/doc',
+        },
+    },
+);
+
+sub make_tree
+{
+    my $root = shift;
+    
+    while (my ($name, $tree) = each %$root) {
+        given ($tree) {
+            when (ref eq "HASH") {
+#warn "mkdir $name\n";
+                if (-e $name) {
+                    warn "$0: skipping '$name' because it exists\n";
+                } else {
+                    mkdir $name;
+                }
+                if (%$tree) {
+#warn "chdir $name\n";
+                    chdir $name;
+                    make_tree($tree);
+                    chdir '..';
+                }
+            }
+            default {
+#warn "symlink $tree, $name\n";
+                if (-e $name || -l $name) {
+                    warn "$0: skipping '$name'->'$tree' because it exists\n";
+                } else {
+                    symlink $tree, $name;
+                }
+            }
+        }
+    }
+}
+
+chdir '/';
+make_tree(\%root);

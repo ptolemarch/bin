@@ -1,0 +1,11 @@
+#! /bin/bash
+
+shopt -s extglob
+
+while [ -r "$1" ]; do
+	infile="$1"; shift
+    tempfile="$(mktemp -t jpeg_rotate_ccw)"
+
+    jpegtran -copy all -rotate 270 -optimize -progressive -perfect "$infile" > "$tempfile"
+    mv "$tempfile" "$infile"
+done

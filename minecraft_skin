@@ -1,0 +1,72 @@
+#! /usr/bin/env perl
+use strict;
+use warnings;
+use 5.16.0;
+
+my $mc_site = 'http://minecraft.net/';
+my $mc_acct = 'davidhand@davidhand.com';
+my $mc_pass = 'CatsCardsPoetsDays~70';
+my $mc_name = 'ptolemarch';
+
+# things to look for in the 
+my %check_for = (
+    login => "Logged in as $mc_name",
+    profile => 'Change how you look in Minecraft',
+    skin => q/
+        Your skin has been changed!
+        It will take a couple of seconds for it to update.
+    /,
+);
+my %problem_is = (
+    too_recent => q/
+        Too many recent skin changes.
+        Please wait a couple of minutes before changing your skin again.
+    /,
+);
+for my $hr (\%check_for, \%problem_is) {
+    for (values %$hr) {
+        s/\A\s*//;
+        s/\s*\Z//;
+        s/\s+/\\s+/g;
+        $_ = qr/$_/i;
+    }
+}
+
+# one two three GO
+my $skin = shift @ARGV;
+
+use WWW::Mechanize;
+my $mech = WWW::Mechanize->new();
+
+# home page: log in
+$mech->get($mc_site);
+$mech->follow_link( text_regex => qr/Log in/ );
+$mech->submit_form(
+    fields => {
+        username => $mc_acct,
+        password => $mc_pass,
+    },
+);
+# (at some point I need to handle challenges and responses)
+die "Can't log in. Text is: " . $mech->text
+  unless $mech->text =~ $check_for{login};
+
+# logged in now: go to profile
+$mech->follow_link( text_regex => qr/Profile/i );
+die "What, no profile page? Text is: " . $mech->text
+  unless $mech->text =~ $check_for{profile};
+
+# profile page: upload skin
+$mech->submit_form(
+    fields => {
+        skin => $skin,
+    },
+);
+unless ((my $skin_text = $mech->text) =~ $check_for{skin}) {
+    my $reason = 'Can\'t upload skin. ';
+    $reason .= 'Too many recent uploads.', die $reason
+      if $skin_text =~ $problem_is{too_recent};
+    
+    $reason .= "I don't know why, but text is: $skin_text";
+    die $reason;
+}

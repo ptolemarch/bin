@@ -1,0 +1,14 @@
+#! /bin/bash
+
+shopt -s extglob
+
+while [ -r "$1" ]; do
+	infile="$1"; shift
+	fullfile="${infile/%.[jJ][pP]?([eE])[gG]/_full.jpg}"
+	halffile="${infile/%.[jJ][pP]?([eE])[gG]/_half.jpg}"
+	quarterfile="${infile/%.[jJ][pP]?([eE])[gG]/_quarter.jpg}"
+
+    cp "$infile" "$fullfile"
+	djpeg -scale 1/2 -dct float "$infile" | cjpeg -optimize -progressive > "$halffile"
+	djpeg -scale 1/4 -dct float "$infile" | cjpeg -optimize -progressive > "$quarterfile"
+done

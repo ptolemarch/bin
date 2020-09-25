@@ -1,0 +1,82 @@
+#! /usr/local/bin/bash
+
+if [[ -f ~/.functions ]]; then
+    source ~/.functions
+fi
+
+# first arg is image dimensions (default to 1680)
+param="${1:-1680}"; shift
+
+if [[ $param = "1920" ]]; then
+    _die 2 $'No can do. :-(\n\tSorry, DB\'s directories for 1920x1280 images are all h0rked. Try:\n\t\thttp://digitalblasphemy.com/content/zips/1920x1200.zip\n\tAlso maybe:\n\t\thttp://digitalblasphemy.com/content/zips/picklejar1920.zip'
+fi
+
+# set up the directory into which to download
+db_dir="$HOME/Pictures/Backgrounds/Digital Blasphemy/"
+declare -A db_subdirs
+db_subdirs=(
+    [1680]='1680x1050'
+    [1080p]='1920x1080'
+    [1920]='1920x1200'
+)
+db_cd="$db_dir${db_subdirs[$param]}"
+
+# set up the URL from which to recurse
+db_url='http://digitalblasphemy.com/content/jpgs/'
+declare -A db_suburls
+db_suburls=(
+    [1920]='widescreen'
+)
+# allow ${db_suburls[$param]} to override $param
+db_root="$db_url${db_suburls[$param]:-$param}/"
+
+cd "$db_cd" || _die 1 "can't \`cd\` to '$db_cd'"
+
+# prepare diff
+ls_tmp_dir=$(mktemp -dt "$(_self)") || _die 1 "can't make temp directory"
+ls_file_before="$ls_tmp_dir/ls.before"
+ls_file_after="$ls_tmp_dir/ls.after"
+
+# record what was already here (for diff)
+ls > "$ls_file_before" || _die 1 "can't save before-listing for diff"
+
+# do what we came here for
+wget \
+    --no-verbose \
+    --recursive \
+    --no-parent \
+    --no-directories \
+    --timestamping \
+    --accept '*.jpg' \
+    --wait 1 \
+    --random-wait \
+    "$db_root" \
+|| _die "wget died so not continuing"
+
+# image dimensions, as reported by rdjpgcom(1)
+declare -A img_dim
+img_dim=(
+    [1680]='1680w * 1050h'
+    [1080p]='1920w * 1080h'
+    [1920]='1920w * 1200h'
+)
+
+# remove junk
+for file in *.jpg
+do
+    if rdjpgcom -verbose "$file" | grep -F "${img_dim[$param]}" > /dev/null
+    then :
+    else
+        _warn "removing junk file: '$file'"
+        rm "$file"
+    fi
+done
+
+# record what is here after (for diff)
+ls > "$ls_file_after" || _warn "can't save after-listing for diff"
+
+# diff!
+_warn "new files:"
+diff "$ls_file_before" "$ls_file_after" \
+| perl -nle 'print $1 if /^> (.*)$/' > /dev/stderr
+rm -r "$ls_tmp_dir" || _warn "unable to remove '$ls_tmp_dir'"

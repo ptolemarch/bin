@@ -1,0 +1,41 @@
+#! /usr/bin/env perl
+
+use strict;
+use warnings;
+
+use Net::Amazon::S3;
+
+my $s3_uri = shift or die "usage: $0 s3-uri";
+
+my ($s3_bucket, $s3_key) = ($s3_uri =~ m{^s3://([^/]+)/(.*)$});
+unless ($s3_bucket) {
+    die "unable to find S3 bucket name in URI: '$s3_uri'";
+}
+unless ($s3_key) {
+    die "unable to find S3 key name in URI: '$s3_uri'";
+}
+
+warn "aws_access_key_id: $ENV{AWS_ACCESS_KEY_ID}\n";
+warn "aws_secret_access_key => $ENV{AWS_SECRET_ACCESS_KEY}\n";
+
+my $s3 = Net::Amazon::S3->new({
+    aws_access_key_id     => $ENV{AWS_ACCESS_KEY_ID},
+    aws_secret_access_key => $ENV{AWS_SECRET_ACCESS_KEY},
+    retry                 => 0,
+});
+
+my $s3_object
+    = Net::Amazon::S3::Client
+    ->new(s3 => $s3)
+    ->bucket(name => $s3_bucket)
+    ->object(key => $s3_key)
+    or warn "problem reaching S3 object at URI '$s3_uri'";
+#$s3_object->exists
+#    or warn "object does not exist at S3 URI '$s3_uri'";
+my $data_layout_json = $s3_object->get
+    or warn "no data layout found at S3 URI '$s3_uri'";
+
+my $data_layout_timestamp = $s3_object->last_modified
+    or warn "data layout last modified time is empty at S3 URI '$s3_uri'";
+
+print $data_layout_json;

@@ -1,0 +1,61 @@
+#!/usr/bin/perl
+
+# phase_of_the_moon(day of the year 0..364 (0..365 if leap year), year in YYYY format)
+sub phase_of_the_moon {
+    # stol^H^H^H^Hconverted directly from NetHack's source code
+    my ($diy, $year) = @_;
+
+    my $goldn = ($year % 19) + 1;
+    my $epact = (11 * $goldn + 18) % 30;
+    $epact++ if ($epact == 25 && $goldn > 11) || $epact == 24;
+
+    return ((((($diy + $epact) * 6) + 11) % 177) / 22) & 7;
+}
+
+sub get_pom_str {
+    # this code appears to work even at end-of-year and during leap years
+
+    my (undef, undef, $hour, undef, undef, $year, undef, $diy) = localtime;
+    $year += 1900; # Perl's localtime gives years since 1900
+
+    my $current_phase = phase_of_the_moon($diy, $year);
+    my $inphase = !!($current_phase == 0 || $current_phase == 4); # 1 if full/new moon, 0 otherwise
+
+    my $leapyear = !!(!($year % 4) && (($year % 100) || !($year % 400))); # 1 if $year is a leap year, 0 otherwise
+    my ($next_diy, $next_year, $next_phase, $next_inphase) = ($diy, $year, $current_phase, $inphase);
+    my $days = 0;
+    my $pom;
+
+    # this loop runs a maximum of ~12 times
+    do {
+	$next_diy++;
+	$days++;
+	if ($next_diy - $leapyear == 365) { # if we've exceeded the days in the current year
+	    $next_diy = 0;
+	    ++$next_year;
+	}
+	$next_phase = phase_of_the_moon($next_diy, $next_year);
+	$next_inphase = !!($next_phase == 0 || $next_phase == 4);
+    } while $inphase == $next_inphase;
+
+    if ($current_phase == 0) { # currently a new moon
+	$pom = "New moon in NetHack " . ($days == 1 ? "until midnight, " : "for the next $days days.");
+    } elsif ($current_phase == 4) { # currently a full moon
+	$pom = "Full moon in NetHack " . ($days == 1 ? "until midnight, " : "for the next $days days.");
+    } elsif ($current_phase < 4) { # currently a waxing moon
+	$pom = "Full moon in NetHack " . ($days == 1 ? "at midnight, " : "in $days days.");
+    } else { # currently a waning moon
+	$pom = "New moon in NetHack " . ($days == 1 ? "at midnight, " : "in $days days.");
+    }
+
+    $pom .= (24 - $hour) . " hour" . (24 - $hour == 1 ? "" : "s") . " from now." if $days == 1;
+
+#    my $prefix = `/usr/games/pom`;
+#    chomp($prefix);
+#    $pom = $prefix.'.  '.$pom;
+    $pom .= "\n";
+
+    return $pom;
+}
+
+print get_pom_str();

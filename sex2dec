@@ -1,0 +1,38 @@
+#! /usr/bin/perl
+use warnings;
+use strict;
+use 5.10.0;
+
+use Readonly;
+
+Readonly my $SEXAGESIMAL => qr/
+    [-+]? ([0-5]?[0-9],)* [0-5]?[0-9] (; ( [0-5]?[0-9] (,[0-5]?[0-9])* )? )?
+    | [-+]?                            ;   [0-5]?[0-9] (,[0-5]?[0-9])*
+/msx;
+
+while (my $input = <>) {
+    next unless ($input =~ /^\s*$SEXAGESIMAL\s*$/omsx);
+
+    my $sign = $input =~ s/^\s*-// ? -1
+             : $input =~ s/^\s*+// ?  1
+             :                        1
+             ;
+    $input =~ s/\s*$//;
+
+    my ($sexip, $sexfp) = split q{;}, $input;
+    my @ipdigits        = split q{,}, $sexip || '';
+    my @fpdigits        = split q{,}, $sexfp || '';
+
+    my ($ip, $fp) = (0)x2;
+
+    while (           @ipdigits) {
+        $ip +=    pop @ipdigits;
+        $_  *= 60 for @ipdigits;
+    }
+    while (           @fpdigits) {
+        $_  /= 60 for @fpdigits;
+        $fp +=  shift @fpdigits;
+    }
+
+    say $sign * ($ip + $fp);
+}

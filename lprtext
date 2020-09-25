@@ -1,0 +1,7 @@
+#! /bin/bash
+
+getopts "2" double_sided
+double_sided="${double_sided:+-o sides=two-sided-long-edge}"
+shift
+
+text_for_printer "$@" | lpr -l "$double_sided"

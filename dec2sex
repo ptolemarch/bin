@@ -1,0 +1,32 @@
+#! /usr/bin/perl
+use warnings;
+use strict;
+use 5.10.0;
+
+use Scalar::Util qw( looks_like_number );
+use POSIX qw( modf );
+
+while (my $line = <>) {
+    for my $input (split q' ', $line) {
+        next unless looks_like_number $input;
+
+        my $sign = $input <=> 0; 
+        my ($f, $i) = modf abs $input;
+        my (@idigits, @fdigits);
+
+        while ($i) {
+            unshift @idigits, $i % 60;
+            $i = int $i / 60;
+        }
+        while ($f) {
+            ($f, my $fdigit) = modf $f * 60;
+            push @fdigits, $fdigit;
+        }
+
+        say(($sign < 0 ? '-' : '')
+          , (join q{,}, @idigits) || '0'
+          , q{;}
+          , (join q{,}, @fdigits)
+        );
+    }
+}

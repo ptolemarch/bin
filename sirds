@@ -1,0 +1,30 @@
+#! /usr/local/bin/perl
+use warnings;
+use strict;
+
+use GD;
+use GD::SIRDS;
+
+my $srcfile = shift;
+my $dstfile = $srcfile; $dstfile =~ s/.[^.]+$/-stereo.png/;
+my $source = GD::Image->new($srcfile);
+
+my @colors = (
+	[  0,  0,  0],
+	[204,204,204],
+	[  0, 51,102],
+	[  0,102,153],
+);
+
+#my @colors;
+#my $count = int(rand(256));
+#while($count--) {
+#	push [int(rand(256), int(rand(256)), int(rand(256))], @colors;
+#}
+
+my $destination = gd_sirds $source, \@colors, 1;
+
+open OUTPUT, '>', $dstfile or die "nein: $!";
+binmode OUTPUT;
+print OUTPUT $destination->png;
+close OUTPUT;

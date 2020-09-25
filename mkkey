@@ -1,0 +1,8 @@
+#! /bin/bash
+
+BITS=8192
+FILENAME="$1" ; shift
+DIRECTORY="$HOME/.ssh"
+COMMENT="$1" ; shift
+
+ssh-keygen -o -b "$BITS" -f "$DIRECTORY/$FILENAME" -C "$COMMENT"

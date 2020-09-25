@@ -1,0 +1,314 @@
+#! /usr/local/bin/perl -T
+
+use warnings;
+use strict;
+
+use Readonly;
+use Carp;
+
+use Net::FTP;
+
+use FindBin;
+use File::Temp;
+use File::stat;
+use List::Util      qw| max |;
+use List::MoreUtils qw| any |;
+use IO::Interactive qw| interactive |;
+use DateTime;
+
+Readonly my $DEBUG => 1;
+
+Readonly my $LS_RECORD => 'ls-record.txt';
+
+Readonly my $OUR_TZ => 'America/Los_Angeles';
+Readonly my $ALT_TZ => 'Europe/Stockholm';
+
+Readonly my $OUR_CITY => 'Los Angeles';
+Readonly my $ALT_CITY => 'Stockholm'; 
+
+=begin testing
+
+=cut
+
+Readonly my $BUFFER_SIZE => 333;
+
+Readonly my $DELAY_SCALE => 30;  # number of seconds to delay at first
+Readonly my @TRIES => map { $_ * $DELAY_SCALE }   # 10 fibonacci tries
+                          (0, 1, 1, 2, 3, 5, 8, 13, 21, 34);
+
+Readonly my $FILTER_PATTERN => qr/\.xml\.gz$/;
+Readonly my $TRUNCATE_PATTERN => '';
+
+Readonly my %HOST => (
+    origin => 'ftp.davidhand.com',   destination => 'ftp.davidhand.com',
+);
+Readonly my %USER => (origin => 'dhc_test1', destination => 'dhc_test2');
+Readonly my %PASS => (origin => 'GQCRQNyI',  destination => 'WBLJ6A#*' );
+         my %FTP  =  (origin =>  undef,      destination =>  undef     );
+         #  %FTP not readonly, just global
+
+=end testing
+
+=cut
+
+
+=begin for-real
+
+Readonly my $BUFFER_SIZE => 1024 * 1024;  # one megabyte at a time
+
+Readonly my $DELAY_SCALE => 30;  # number of seconds to delay at first
+Readonly my @TRIES => map { $_ * $DELAY_SCALE }   # 10 fibonacci tries
+                          (0, 1, 1, 2, 3, 5, 8, 13, 21, 34);
+
+Readonly my $FILTER_PATTERN => qr/\.xml\.gz\.lmp$/;
+Readonly my $TRUNCATE_PATTERN => '.lmp';
+
+Readonly my %HOST => (
+    origin => 'aftp.linksynergy.com',  destination => 'ftp.pricerunner.com'
+);
+Readonly my %USER => (origin => 'pricerunner', destination => 'operationsUS');
+Readonly my %PASS => (origin => 'dL9Ve2h6z',   destination => 'closetowater');
+         my %FTP  => (origin =>  undef,        destination =>  undef        );
+         #  %FTP not readonly, just global
+
+=end for-real
+
+=cut
+
+print {interactive()} "Copying PriceRunner Files\n";
+print {interactive()} "$USER{'origin'}\@$HOST{'origin'}"
+                    . " => "
+                    . "$USER{'destination'}\@$HOST{'destination'}\n";
+
+my $start_time = timestamp('begun');
+
+# log in and get a directory listing
+for my $site (qw( origin destination )) {
+    login($site);
+}
+my @files = list();
+
+# format the printed file list
+my $name_maxlen   = max map { length } @files;
+my $number_maxlen = length @files;  # I *swear* this really is what I want
+my $list_format = "%${number_maxlen}d/%${number_maxlen}d %${name_maxlen}s";
+
+# places to record stuff for reporting later
+my %file_warning;
+my %file_success;
+my $bytes = 0;
+my $files = 0;  # increment only when we upload a file
+
+FILE:
+for my $filename (@files) {
+    printf {interactive()} $list_format,
+        keys(%file_warning) + keys(%file_success) + 1,
+        scalar @files,
+        $filename;
+
+    my $tempfile = download($filename) or next FILE;
+
+    my $size = stat($tempfile)->size();
+    print {interactive()} "  ($size bytes)\n";
+
+    upload($tempfile, $filename) or next FILE;
+
+    $file_success{$filename} = $size;
+
+    $bytes += $size;
+    $files ++;
+}
+
+# diff from previous
+#   get old list
+#   diff old list vs. new list
+
+# email diff and status
+#   diff
+#   time run
+#   time elapsed
+#   total copied:  bytes, files
+#   problem lists
+
+END {
+    # do all this even if something goes wrong elsewhere
+    for my $site (qw(origin destination)) {
+        disconnect($site);
+    }
+
+    my $end_time = timestamp('completed');
+
+    print {interactive()} "Copied $bytes bytes in $files files\n";
+
+    if (my $problems = keys %file_warning) {
+        _warn("problems copying $problems files\n");
+    }
+}
+
+sub login
+{
+    my $site = shift;
+
+    TRY:
+    for my $sleep (@TRIES) {
+        print {interactive()} "sleeping for $sleep seconds\n" if $DEBUG;
+        sleep $sleep;
+
+        # if we can't connect, try again
+        print {interactive()} "connecting\n" if $DEBUG;
+        my $ftp = Net::FTP->new($HOST{$site}, Passive => 1, Timeout => 10)
+            or next TRY;
+
+        # log in and such because we're connected
+        print {interactive()} "logging in\n" if $DEBUG;
+        $ftp->login($USER{$site}, $PASS{$site})
+            or _die("Can't log in as $USER{$site}\@$HOST{$site}");
+        $ftp->binary();
+
+
+        # connection worked, so return
+        print {interactive()} "connected\n" if $DEBUG;
+        $FTP{$site} = $ftp;
+        return $ftp;
+    }
+
+    # give up
+    _die("Can't connect to $site host $HOST{$site}: $@");
+}
+
+sub disconnect
+{
+    my $site = shift;
+
+
+    print {interactive()} "disconnecting\n" if $DEBUG;
+    $FTP{$site}->quit()
+        or _warn("Error disconnecting from $site host $HOST{$site}");
+    print {interactive()} "disconnected\n" if $DEBUG;
+
+    undef $FTP{$site};  # undef, not delete
+}
+
+sub verify
+{
+    my $site = shift;
+
+    if (not $FTP{$site} && $FTP{$site}->pwd()) {
+        disconnect($site);  # just to be sure
+        login($site);  # this will retry a few times if it has to
+    }
+}
+
+sub list
+{
+    # only the files that are useful
+    my @files = map  { m/^ (.+?) \Q$TRUNCATE_PATTERN\E $/msx }
+                grep { m/$FILTER_PATTERN/ }
+                     $FTP{origin}->ls();
+
+    # testing for some particular file
+    if (my $name = shift) {
+        return any { $_ eq $name } @files;
+    }
+
+    # otherwise sort
+    return map  { $_->[0] }
+           sort { $a->[2] <=> $b->[2]  or  $a->[1] <=> $b->[1] }
+           map  { [ $_, (split '_', $_, 3) ] }
+                @files;
+}
+
+sub download
+{
+    my $filename = shift;
+
+    my $tempfile;
+
+    TRY:
+    for (@TRIES) {
+        verify('origin');
+
+        # don't bother if it's not even there
+        print {interactive()} "\ntesting for file existence\n" if $DEBUG;
+        if (not list($filename)) {
+            $file_warning{$filename} = "disappeared";
+            _warn("File $filename disappeared!");
+            return;
+        }
+
+        # download the file, or try again
+        print {interactive()} "downloading file\n" if $DEBUG;
+        $tempfile = File::Temp->new();
+        $FTP{origin}->get($filename, $tempfile)
+            or next TRY;
+
+        # return it
+        # (TODO:  check to make sure it's a gzip of a complete XML file)
+        print {interactive()} "file downloaded\n" if $DEBUG;
+        return $tempfile;
+    }
+
+    # give up
+    $file_warning{$filename} = "unable to download";
+    _warn("Unable to download file $filename");
+    return;
+}
+
+sub upload
+{
+    my $tempfile = shift;
+    my $filename = shift;
+
+    TRY:
+    for (@TRIES) {
+        verify('destination');
+
+        # rewind the file to the beginning
+        $tempfile->seek(0,0);
+
+        # upload that puppy, or try again
+        print {interactive()} "uploading file\n" if $DEBUG;
+        $FTP{destination}->put($tempfile, $filename)
+            or next TRY;
+
+        # success!
+        print {interactive()} "file uploaded\n" if $DEBUG;
+        return 1;
+    }
+
+    # give up
+    $file_warning{$filename} = "unable to upload";
+    _warn("Unable to upload file $filename");
+    return;
+}
+
+sub timestamp
+{
+    my $message = shift;
+
+    my $time = DateTime->now();
+    my $tmp_tz = $time->time_zone();
+
+    my $format = "%T";
+
+    my $utc = $time->strftime($format) . " UTC";
+    $time->set_time_zone($OUR_TZ);
+    my $our = $time->strftime($format) . " $OUR_CITY";
+    $time->set_time_zone($ALT_TZ);
+    my $alt = $time->strftime($format) . " $ALT_CITY";
+    $time->set_time_zone($tmp_tz);
+
+    print {interactive()} "Transfer $message at $our ($alt, $utc)\n";
+
+    return $time;
+}
+
+sub _warn
+{
+    warn "$FindBin::Script: $_[0]\n";
+}
+
+sub _die
+{
+    die  "$FindBin::Script: $_[0]\n";
+}

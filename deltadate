@@ -1,0 +1,134 @@
+#! /usr/bin/env perl
+
+use 5.20.0;
+use warnings;
+
+use DateTime;
+use DateTime::Format::Strptime;
+use DateTime::Format::Duration;
+
+use Scalar::Util qw/ blessed /;
+use List::MoreUtils qw/ zip /;
+
+use Data::Printer;
+
+my $now = DateTime->now( time_zone => 'America/Detroit' );
+
+my $multiple = 0;
+if ($ARGV[0] =~ /^([\.\d]+)%$/) {
+    shift;  # throw it away...
+    my $percentage = $1 / 100;  # ...but use the matched number
+
+    $multiple = 1 / $percentage;
+}
+
+# if only one date, compare vs now
+my ($date0, $date1) = sort map { parse_date($_) } (@ARGV, $now);
+
+my $duration = $date1 - $date0;
+
+if ($multiple) {
+    my $total = $duration * $multiple;
+    my $remaining = $total - $duration;
+
+    # these come to the same thing, thank God
+    #   OH SHIT EXCEPT FOR TIME ZONE
+    # to keep the TZ of the input, use the
+    #   $date0 + $total
+    # formulation
+    my $date2 = $date0 + $total;
+    #my $date2 = $date1 + $remaining;
+
+    say
+             "(", format_duration($duration), ")"
+        , " + (", format_duration($remaining), ")"
+        , " = (", format_duration($total), ")"
+        ;
+    say format_date($date2);
+} else {
+    say format_duration($duration);
+}
+
+sub format_duration
+{
+    my $duration = shift;
+    my $format = DateTime::Format::Duration->new(
+        base => $now,
+    );
+    my %normalized_deltas = $format->normalize($duration);
+
+    return $format->format_duration_from_deltas(
+        %normalized_deltas,
+        pattern => build_pattern(\%normalized_deltas),
+    );
+}
+
+sub build_pattern
+{
+    my $duration = shift;
+    my %deltas
+        = blessed $duration
+          && $duration->isa('DateTime::Duration') ? $duration->deltas
+        : ref $duration eq 'HASH'                 ? %$duration
+        : die "dunno what to do with [duration $duration]"
+        ;
+
+    # just gotta be a better way
+    # (wanna look up formats by period name,
+    #  but also want to iterate over periods in descending order of length)
+    my @periods = qw/ years months days hours minutes seconds /;
+    my @formats = qw/ %Y    %m     %e   %H    %M      %S      /;
+    my %format_for = zip @periods, @formats;
+
+    my @pattern;
+    for my $period (@periods) {
+        push @pattern, "$format_for{$period} $period" if $duration->{$period};
+    }
+
+    return join q/ /, @pattern;
+}
+
+my $FORMAT_USED;
+
+sub parse_date
+{
+    my $date_string = shift;
+
+    return $date_string
+        if blessed $date_string
+        and $date_string->isa('DateTime');
+
+    my %formats = (
+        account_mover => DateTime::Format::Strptime->new(
+            pattern => '%F %T %Z',
+        ),
+        slash_bin_slash_date_EST => DateTime::Format::Strptime->new(
+            pattern => '%a %b %d %T EST %Y',
+            time_zone => 'America/Detroit',
+        ),
+        slash_bin_slash_date_UTC => DateTime::Format::Strptime->new(
+            pattern => '%a %b %d %T UTC %Y',
+            time_zone => 'UTC',
+        ),
+    );
+
+    for my $format (values %formats) {
+        my $date = $format->parse_datetime($date_string);
+
+        if ($date) {
+            $FORMAT_USED = $format;
+
+            return $date;
+        }
+    }
+
+    die "can't convert [$date_string] to a valid date";
+}
+
+sub format_date
+{
+    my $datetime = shift;
+    die "no format previously used" unless $FORMAT_USED;
+
+    return $FORMAT_USED->format_datetime($datetime);
+}

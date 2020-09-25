@@ -1,0 +1,15 @@
+#! /usr/local/bin/perl
+#perl -le'$x=eval shift;print int($x*=60)while$x-=int$x'
+
+use warnings;
+use strict;
+
+my $victim = eval shift;
+my @digits;
+
+while ($victim -= int $victim) {
+    $victim *= 60;
+    push @digits, int $victim;
+}
+
+print '0;', join(',', @digits), "\n";

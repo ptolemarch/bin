@@ -1,0 +1,18 @@
+#! /usr/local/bin/perl
+#perl -le'$x+=$_/60**++$.for@ARGV;print$x'
+
+use warnings;
+use strict;
+
+my ($frac) = reverse split ';', shift;  # reverse for elem #2 of 2-elem list
+my @digits = split ',', $frac;
+
+my $sum = 0;
+my $pow = 1;
+
+for my $digit (@digits) {
+    $sum += $digit / (60 ** $pow);
+    $pow++;
+}
+
+print "$sum\n";

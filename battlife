@@ -1,0 +1,24 @@
+#! /usr/local/bin/perl -sT
+use warnings;
+use strict;
+
+our ($t, $p, $c);  # -s
+
+use POSIX qw(floor modf);
+
+my $time = ($t =~ /(\d*:\d{0,2})/)[0];
+my $percentage = ($p =~ /(\d*(?:\.\d*)?)%?/)[0] || 0;
+$percentage = 100 - $percentage if $c;
+
+my $minutes = (($time=~/^(\d*)/)[0]||0)*60 + (($time=~/(\d*$)/)[0]||0);
+my $fraction = $percentage / 100;
+
+my $estimate = $minutes / $fraction;
+$estimate = floor($estimate);
+
+my $hours;
+($minutes, $hours) = modf($estimate/60);
+$minutes *= 60;
+$minutes = floor($minutes);
+
+printf "%d:%02.0d\n", $hours, $minutes;

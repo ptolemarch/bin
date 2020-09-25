@@ -1,0 +1,8 @@
+#! /bin/bash
+
+rsync --verbose --progress \
+	--recursive --update --hard-links --compress --delete \
+	--cvs-exclude --safe-links \
+	~www/Documents/ davidhand.com:web/davidhand.com/
+ssh davidhand.com \
+	"web/davidhand.com/bin/fix_shebang ~/web/davidhand.com"

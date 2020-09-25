@@ -1,0 +1,11 @@
+#! /bin/bash
+
+self="${0##*/}"
+
+while xmlfile="$1"; shift; [[ "$xmlfile" != "" ]]; do
+    tempfile="/tmp/$self-$$.xml"
+
+    echo "- $tempfile"
+    xmllint --format --output "$tempfile" "$xmlfile"
+    mv "$tempfile" "$xmlfile"
+done

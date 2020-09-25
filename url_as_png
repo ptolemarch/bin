@@ -1,0 +1,23 @@
+#! /usr/bin/env perl
+
+use WWW::Mechanize::Firefox;
+use Data::Printer;
+
+my $url = shift || "http://google.com/";
+
+my $mech = WWW::Mechanize::Firefox->new();
+$mech->get($url, {synchronize=>1})
+  or die "apparently I can't even get your fucking URL";
+my $png = $mech->content_as_png
+  or die "no fucking content in the goddamned fucking PNG. Fuck this";
+  # this seems to happen when there's no *acutal* content. For example
+  #  davidhand.com where there's only a background color...
+
+my $outpng_name = shift || "mechanize.png";
+
+open my $outpng, '>', $outpng_name
+  or die "can't open $outpng_name for writing: $!";
+print $outpng $png
+  or die "can't print to $outpng_name: $!";
+close $outpng
+  or die "can't close $outpng_name after writing: $!";

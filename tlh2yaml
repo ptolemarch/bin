@@ -1,0 +1,83 @@
+#! /usr/local/bin/perl
+use warnings;
+use strict;
+
+# hash of arrays of hashes of arrays
+my %klingon;
+(
+      "be'" => {
+              'n' => [
+                      {
+                              'definition' => "$definition",
+                              'annotation' => "$annotation",
+                      },
+              ],
+      },
+)
+$klingon = {
+      word1 => {
+              verb => [
+                      {
+                              definition => 'definition',
+                              annotation => 'annotation',
+                              source => 'source',
+                      },
+                      {
+                              definition => 'definition',
+                              annotation => 'annotation',
+                      }
+              ],
+              noun => [
+                      {
+                              definition => 'definition',
+                              annotation => 'annotation',
+                      },
+                      {
+                              definition => 'definition',
+                              annotation => 'annotation',
+                      }
+              ],
+      },
+      word2 => {
+              verb => [
+                      {
+                              definition => 'definition',
+                              annotation => 'annotation',
+                      },
+                      {
+                              definition => 'definition',
+                              annotation => 'annotation',
+                      }
+              ],
+              noun => [
+                      {
+                              definition => 'definition',
+                              annotation => 'annotation',
+                      },
+                      {
+                              definition => 'definition',
+                              annotation => 'annotation',
+                      }
+              ],
+      },
+}
+
+my %abbreviations = (
+        n       => 'noun',              #n
+        v       => 'verb',              #v
+        pro     => 'pronoun',           #p
+        adv     => 'adverbial',         #a
+        ques    => 'question',          #q
+        num     => 'number',            #m
+        conj    => 'conjunction',       #c
+        excl    => 'exclamation',       #e
+);
+
+while (<>) {
+        next if /^#/ or /^\s*$/;
+        my ($word, $definition) = /(.*?)\s{2,}(.*)$/;
+
+        my ($definition, $annotation) = /[^,()]\+ \([^)]\)\s+\([^)]\)/x;
+}
+
+# output YAML to some mutation of $ARGV

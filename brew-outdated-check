@@ -1,0 +1,26 @@
+#! /usr/bin/env perl
+use 5.20.0;
+use warnings;
+
+my @formulae =
+       @ARGV ? @ARGV
+             : grep {/\A[\w-]+\Z/} `brew list`;
+chomp @formulae;
+
+for my $formula (@formulae) {
+    my($ver_stable, $ver_installed);
+    for (`brew info $formula`) {
+        # the first one wins
+        $ver_stable
+        || m{^(\w+/\w++/)?+\Q$formula\E: stable (?<ver_stable>[\w.-]+)}
+        && ($ver_stable = $+{ver_stable});
+
+        # the last one wins
+        m{^/usr/local/Cellar/\Q$formula\E/(?<ver_installed>[\w.-]+)}
+        && ($ver_installed = $+{ver_installed});
+    }
+
+    say "$formula installed '$ver_installed' stable '$ver_stable'"
+      if $ver_installed ne $ver_stable
+     and $ver_installed !~ /\A${ver_stable}_\d\z/;
+}

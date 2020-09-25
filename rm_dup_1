@@ -1,0 +1,23 @@
+#! /usr/local/bin/perl
+use v5.14.0;
+use warnings;
+use strict;
+
+use File::Find;
+
+File::Find::find(
+    {
+        wanted => \&wanted,
+    },
+    '.'
+);
+
+sub wanted
+{
+    if (/^(?<filename>.*) 1(?<fileext>\..*)$/) {
+        my $origfile = "$+{filename}$+{fileext}";
+        if (-e $origfile) {
+            say "$_";
+        }
+    }
+}

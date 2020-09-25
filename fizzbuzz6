@@ -1,0 +1,65 @@
+#! /usr/bin/perl6
+
+# [1..100].map({ $_ %% 15 ?? "fizzbuzz" !! $_ %%  3 ?? "fizz" !! $_ %%  5 ?? "buzz" !! $_ })».say
+# say ( $_ %% 15 ?? "fizzbuzz" !! $_ %%  3 ?? "fizz" !! $_ %%  5 ?? "buzz" !! $_ ) for 1..100
+# [1..100].map({ [~] gather { $_ %% 3 && take "fizz"; $_ %% 5 && take "buzz" } or $_})».say
+# [1..100].map({[~] ($_%%3||Empty, $_%%5||Empty) Z&& <fizz buzz> or $_})».say
+# [1..100].map({[~] (($_%%3, $_%%5) Z&& <fizz buzz>) Z|| ("","") or $_ })».say
+# [1..100].map({[~] ($_%%3, $_%%5) »||» "" Z&& <fizz buzz> or $_ })».say
+# [1..100].map({[~] ($_%%3, $_%%5) »&&« <fizz buzz> »||» "" or $_ })».say
+# say ( [~] ($_%%3, $_%%5) »||» "" Z&& <fizz buzz> or $_ ) for 1..100
+#
+# I think this one is my favorite:
+# [1..100].map({[~] ($_%%3, $_%%5) »&&« <fizz buzz> »||» "" or $_ })».say
+#
+# But this one is the one I put on Rosetta Code,
+#  'cuz it demonstrates more (5) different list operations:
+#    - .map()
+#    - ».
+#    - [.op.]    (i.e. [op])
+#    - ».op.»
+#    - Z.op.
+# [1..100].map({[~] ($_%%3, $_%%5) »||» "" Z&& <fizz buzz> or $_ })».say
+#
+# Full golf version:
+# say ([~] ($_%%3,$_%%5) »||»""Z&&<fizz buzz>or$_)for 1..100
+# or if you're willing to cheat:
+# say ([~] ($_%%3,$_%%5) »||»""Z&&<fizz buzz>or$_)for ^100
+#
+# What I tweeted: https://twitter.com/Ptolemarch/status/768565774659293184
+# #perl6 -e 'say ([~] ($_%%3, $_%%5) »||» "" Z&& <fizz buzz> or $_) for 1..100'  #fizzbuzz
+#
+# AAAUGH! From Rosetta Code, staggeringly short and stunningly clear:
+# say "Fizz"x$_%%3~"Buzz"x$_%%5||$_ for 1..100
+#
+# Improvement by Util at TPC2017DC / YAPC 2017:
+# say ([~] $_ «%%« (3, 5) »||» "" Z&& <fizz buzz> or $_) for 1..100
+# say ([~] $_ «%%« (3, 5) »||» "" Z&& <fizz buzz> or $_) for ^100 »+» 1
+#
+# Hence tweeted:
+
+if Bool.pick {
+	#  (~0.160s including startup)
+	say (
+		[~] ($_%%3, $_%%5) »||» "" Z&& <fizz buzz>
+		or $_
+	) for 1 .. 100;
+} else {
+	# but this appears to be faster
+	#  (~0.110s including startup)
+	for 1 .. 100 {
+		$^a %% 3 && print 'fizz';
+		$^a %% 5 && print 'buzz';
+		$^a !%% 3 && $^a !%%5 && print $^a;
+		print "\n";
+	};
+}
+
+#####
+
+# <fizz buzz> (%_%%5, %_%%3)
+#
+# ("fizz", "buzz", $_)
+# (%_%%5, %_%%3)
+#
+# (%_%%5, %_%%3) Z&& <fizz buzz>

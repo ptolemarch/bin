@@ -1,0 +1,20 @@
+#! /bin/bash
+
+shopt -s extglob
+
+while [ -r "$1" ]; do
+	infile="$1"; shift
+	outfile="${infile/%.[jJ][pP]?([eE])[gG]/_small.jpg}"
+
+	#cp "$infile" "$outfile"
+	#convert \
+	#	-verbose \
+	#	-size 320x240 \
+	#	-resize 320x240 \
+	#	-shave 1x1 \
+	#	-border 1x1 \
+	#	-bordercolor black \
+	#	-comment "Copyright (c) 2004 David 'cogent' Hand" \
+	#	"$infile" "$outfile"
+	djpeg -scale 1/8 -dct float "$infile" | cjpeg -progressive > "$outfile"
+done

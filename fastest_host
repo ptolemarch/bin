@@ -1,0 +1,9 @@
+#! /bin/bash
+
+# Show speed (as measured by ping(1)) of hosts on command line.
+
+for mirror in "$@"; do
+	ping -c 5 -i 1 "$mirror" \
+		| awk '/round-trip/{print $4};' \
+		| awk -F '/' -v "mirror=$mirror" '/\//{print $2, mirror}'
+done | sort -n

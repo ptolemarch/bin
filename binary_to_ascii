@@ -1,0 +1,9 @@
+#! /usr/bin/env perl
+use warnings;
+use strict;
+
+while(<>){
+	chomp;
+	s/[^01]//g;
+	print pack("B*", $_), "\n";
+}

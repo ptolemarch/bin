@@ -1,0 +1,119 @@
+#! /usr/local/bin/perl
+
+# might be nice to (be able to) skip certain things like:
+# : @ / ? & % (because of embedding in URLs)
+# iIl1| oO0 (hard to tell apart)
+# other bad pairs:
+# o0 l1 z2 s5 7 6b 9q 9g ad ce tf ij nh nm uv
+# what's 7 confused with?
+# ok:
+# kprwxy1234567890
+
+# ok capital letters:
+# ACEQRT
+
+# Snowden's "trillion guesses a second" for a year
+# = 31556926000000000000
+# 2^64 < 31556926000000000000 < 2^65
+
+
+# whole keyboard (except space & control characters)
+# 94^16 = 37157429083410091685945089785856
+# 94^64 = 1906262174603609240179178656657625086945986037788719949935941357851066322596406102384587670757587004664979877271875661328285696 = 1.91e126 (Shannon number * 2 billion)
+#perl -le '@c=split(//,q{~!@#$%^&*()_+QWERTYUIOP{}|ASDFGHJKL:"ZXCVBNM<>?}.q{`1234567890-=qwertyuiop[]\asdfghjkl;'"'"'zxcvbnm,./});$p.=$c[rand@c]for(1..16);print$p'
+# same thing as above:
+#perl -le '@c=map{chr}(ord"!"..ord"~");$p.=$c[rand@c]for(1..16);print$p'
+# or even:
+#perl -E'@c=map{chr}(ord"!"..ord"~");say map{$c[rand@c]}(0)x16'
+
+# iPhone keyboard
+# QWERTYUIOPASDFGHJKLZXCVBNM
+# qwertyuiopasdfghjklzxcvbnm
+# 1234567890-/:;()$&@".,?!'
+# []{}#%^*+=_\|~<>
+# (26+26+25+16) = 93
+# (and other currency-symbol chars on that last page)
+# (and other stuff accessible by long-pressing, eg. backtick)
+#perl -le '@c=split(//,q{QWERTYUIOPASDFGHJKLZXCVBNM}.q{qwertyuiopasdfghjklzxcvbnm}.q{1234567890-/:;()$&@".,?!'"'"'}.q{[]{}#%^*+=_\|~<>});$p.=$c[rand@c]for(1..16);print$p'
+
+# skips ` ' (because it's a PITA in a one-liner)
+# 45^16 = 282748441902441558837890625
+#perl -le '@c=split(//,q{1234567890-=qwertyuiop[]\asdfghjkl;zxcvbnm,./});$p.=$c[rand@c]for(1..16);print$p'
+
+# 62^16 = 47672401706823533450263330816
+# 62^8  = 218340105584896
+#perl -le '@c=("A".."Z","a".."z","0".."9");$p.=$c[rand@c]for(1..16);print$p'
+#perl -E'@c=("a".."z","A".."Z","0".."9");$p.=$c[rand@c]for(1..8);say$p'
+
+
+
+# all lowercase and numbers, no lo10
+# 32^16 = 1208925819614629174706176
+#perl -le '@c=split(//,q{abcdefghijkmnpqrstuvwxyz23456789});$p.=$c[rand@c]for(1..16);print$p'
+
+# all lowercase and numbers, no lo10
+# 26^16 = 43608742899428874059776  (still 1381907 yr at 1e9 keys/sec)
+#perl -le '@c=split(//,q{abcdefgijkpqrstwxyz2345689});$p.=$c[rand@c]for(1..16);print$p'
+
+# all lowercase and numbers, no: o0 l1 z2 s5 7 ad 6b 9q  | yes: ce tf ij
+# 16^16 = 2^64 = 18446744073709551616  (still 584 yr at 1e9 keys/sec)
+#perl -le '@c=split(//,q{cefgijkprtwxy348});$p.=$c[rand@c]for(1..16);print$p'
+
+# all lowercase and numbers, no: 0olzsadbqcetfij
+# 16^16 = 2^64 = 18446744073709551616  (still 584 yr at 1e9 keys/sec)
+#perl -le '@c=split(//,q{kprwxy1234567890});$p.=$c[rand@c]for(1..16);print$p'
+#perl -E'$_=kprwxy1234567890;@c=split//;s/./$c[rand@c]/eg;say'  # golf: 61
+
+use warnings;
+use strict;
+
+no warnings 'qw';
+
+my @right = qw(
+    ` 1 2 3 4 5 6
+    q w e r t
+    a s d f g
+    z x c v b
+);
+
+my @left = qw(
+    7 8 9 0 - =
+    y u i o p [ ] \
+    h j k l ; '
+    n m , . /
+);
+
+my %shifted = qw(
+    `   ~         q   Q         a   A         z   Z 
+    1   !         w   W         s   S         x   X 
+    2   @         e   E         d   D         c   C 
+    3   #         r   R         f   F         v   V 
+    4   $         t   T         g   G         b   B 
+    5   %         y   Y         h   H         n   N 
+    6   ^         u   U         j   J         m   M 
+    7   &         i   I         k   K         ,   < 
+    8   *         o   O         l   L         .   > 
+    9   (         p   P         ;   :         /   ? 
+    0   )         [   {         '   " 
+    -   _         ]   }
+    =   +         \   |
+);
+
+my @same_finger = (
+    [qw(   ` 1 q a z             )],
+    [qw(   2 w s x               )],
+    [qw(   3 e d c               )],
+    [qw(   4 r f v 5 t g b       )],
+    [qw(   6 y h n 7 u j m       )],
+    [qw(   8 i k ,               )],
+    [qw(   9 o l .               )],
+    [qw(   0 p ; / - [ ' = ] \   )],
+);
+
+__END__
+
+1. Not left hand imm. before left shift
+2. No same-finger letters imm. after each other
+3. No pinky letters imm. before or imm. after shift
+4. Avoid mistaken letters?  I1l O0 5s z7 49 ji
+5. Avoid iPhone-difficult keys

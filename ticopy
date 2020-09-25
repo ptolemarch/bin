@@ -1,0 +1,7 @@
+#! /bin/bash
+
+ticopy_temp="/tmp/ticopy.$$" 
+
+tee "$ticopy_temp" | pbcopy
+cat "$ticopy_temp"
+rm  "$ticopy_temp"

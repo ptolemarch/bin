@@ -1,0 +1,35 @@
+#! /usr/local/bin/bash
+
+function die() {
+    local errcode=$1; shift
+    local message=$1; shift
+    echo "$message" >&2
+    exit "$errcode"
+}
+
+MODLOADER_FILE='ModLoader.zip'
+MODLOADER_PATH='http://dl.dropboxusercontent.com/u/20629262/Latest'
+MODLOADER_URL="$MODLOADER_PATH/$MODLOADER_FILE"
+
+TMPDIR=~/tmp
+MC_TMPDIR=minecraft_patch_temporary_dir
+MC_JAR=~/'Library/Application Support/minecraft/bin/minecraft.jar'
+
+cd "$TMPDIR" || die 1 "Can't cd to $TMPDIR"
+
+wget "$MODLOADER_URL" || die 1 "Can't download ModLoader"
+
+mkdir "$MC_TMPDIR" \
+&& cd "$MC_TMPDIR" \
+|| die 1 "Can't create/enter temp dir '$TMPDIR/$MC_TMPDIR'"
+
+jar xf "$MC_JAR" \
+&& rm META-INF/MOJANG_C.* \
+&& unzip -jo ../"$MODLOADER_FILE" \
+&& jar uf "$MC_JAR" ./ \
+|| die 1 "Can't construct new jar contents"
+
+cd .. \
+&& rm -r "$MC_TMPDIR" \
+&& rm "$MODLOADER_FILE" \
+|| die 1 "Can't clean up after myself"

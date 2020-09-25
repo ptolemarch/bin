@@ -1,0 +1,48 @@
+#! /usr/local/bin/perl -Tws
+use strict;
+
+our ($org, $truly);  # -s
+
+use if $org, 'Math::RandomOrg' => qw| randnum |;
+use if $truly, 'Math::TrulyRandom';
+
+use List::Util qw| sum |;
+
+use constant DICE       => 3;
+use constant STATS      => 6;
+use constant MAXR       => 1_000_000_000_000;  # one trillion
+
+srand(truly_random_value()) if $truly;
+srand(randnum()) if $org;
+
+my @stats = stats();
+print join("\t", sort({$b <=> $a} @stats), '|', sum(@stats)), "\n";
+
+sub stats
+{
+        my @stats;
+
+        for (my $stat = 0; $stat < STATS+1; ++$stat) {
+                my @dice;
+                push @dice, int(rand(6))+1 for 1 .. DICE+1;
+                @dice = dropleast(@dice);
+
+                $stats[$stat] = sum(@dice);
+        }
+
+        @stats = dropleast(@stats);
+}
+
+sub dropleast
+{
+        my @list = @_;
+
+        my $index;
+        my $least = MAXR;
+        for (my $i = 0; $i < @list; ++$i) {
+                $least = $list[$i], $index = $i if $list[$i] < $least;
+        }
+
+        splice @list, $index, 1;
+        return @list;
+}

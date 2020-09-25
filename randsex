@@ -1,0 +1,34 @@
+#! /usr/local/bin/perl
+
+use warnings;
+use strict;
+
+my $DEFAULT_DIGITS   = 18;
+my $DEFAULT_EXPONENT = 0;
+
+my $digits   = shift || $DEFAULT_DIGITS;    # 0 doesn't make sense
+my $exponent = shift || $DEFAULT_EXPONENT;  # 0 is typical
+
+# $exponent might be poorly named.  I guess what I mean here is that the
+# number returned will lie within the range  0 <= number < 60**$exponent
+
+my @fraction;
+for (1 .. $digits) {
+    push @fraction, int rand 60;
+}
+
+my $offset = 0;
+my $length = $exponent < 0       ?  0
+           : $exponent > $digits ?  $digits
+           :                        $exponent
+           ;
+my $zeroes = $exponent > $digits ?  $exponent - $digits
+           :                       -$exponent
+           ;
+my @zeroes = (0) x $zeroes;
+
+my @integer = splice @fraction, 0, $length, @zeroes;
+
+my $rand = join ';', (join ',', @integer), (join ',', @fraction);
+
+print "$rand\n";
