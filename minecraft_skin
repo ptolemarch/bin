@@ -5,7 +5,9 @@ use 5.16.0;
 
 my $mc_site = 'http://minecraft.net/';
 my $mc_acct = 'davidhand@davidhand.com';
-my $mc_pass = 'CatsCardsPoetsDays~70';
+# this is no longer my MC password, and a good thing because
+#  it's in Git. No passwords in ~/bin anymore!
+#my $mc_pass = 'CatsCardsPoetsDays~70';
 my $mc_name = 'ptolemarch';
 
 # things to look for in the 
