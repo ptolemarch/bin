@@ -1,0 +1,6 @@
+#! /usr/bin/env bash
+
+width="${1:-24}"
+height="${2:-80}"
+
+printf "\033[8;${width};${height}t"
