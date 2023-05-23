@@ -1,0 +1,71 @@
+#! /usr/bin/env bash
+
+HORIZ=3840
+VERT=2160
+
+blasphemy="$1" ; shift
+
+if [[ $blasphemy = *.jpg ]] ; then : ; else
+	echo "This currently only works to split JPEGs," 1>&2
+	echo "  filename ending in .jpg."                1>&2
+	exit 1
+fi
+
+# == FUNCTIONS ========================================================
+_self()
+{
+    local funcname script func
+
+    for funcname in "${FUNCNAME[@]}"; do
+        if [[ "$funcname" =~ ^_ ]]; then
+            :
+        else
+            func="$funcname"
+            break
+        fi
+    done
+
+    if [[ "$0" == "-bash" ]]; then
+        script="$0"
+    else
+        script="$(basename "$0")"
+    fi
+
+    if [[ -z "$func" || "$func" == "main" ]]; then
+        echo -n "$script"
+    else
+        echo -n "$func"
+    fi
+}
+
+_warn()
+{
+    echo "$(_self):" "$@" > /dev/stderr
+}
+_die()
+{
+    local code="$1"; shift
+    _warn "$@"
+    exit $code
+}
+
+# == MAIN CODE ========================================================
+real_blasphemy="$(realpath "$blasphemy")"
+[[ -f "$real_blasphemy" ]] || _die 1 "file doesn't exist: [$blasphemy]"
+dir_blasphemy="$(dirname "$real_blasphemy")"
+[[ -d "$dir_blasphemy" ]] || _die 1 "no directory containing [$blasphemy]?!"
+basename_blasphemy="$(basename -s .jpg "$real_blasphemy")"
+dir_split="$dir_blasphemy/_split"
+mkdir -p "$dir_split"
+[[ -d "$dir_split" ]] || _die 1 "tried and failed to create [$dir_split]"
+
+blasphemy_left="$dir_split/$basename_blasphemy.left.jpg"
+blasphemy_right="$dir_split/$basename_blasphemy.right.jpg"
+
+jpegtran -perfect -strict -crop "${HORIZ}x${VERT}+0+0" \
+	"$real_blasphemy" > "$blasphemy_left"
+jpegtran -perfect -strict -crop "${HORIZ}x${VERT}+${HORIZ}+0" \
+	"$real_blasphemy" > "$blasphemy_right"
+
+wallpaper set --screen 1 "$blasphemy_left"
+wallpaper set --screen 2 "$blasphemy_right"

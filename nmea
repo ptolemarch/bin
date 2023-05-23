@@ -1,0 +1,12 @@
+#! /usr/bin/env perl
+
+# calculate NMEA checksum (for sending commands to a GPS)
+
+use 5.32.0;
+
+my $word = shift;
+
+# from https://stackoverflow.com/a/17071581/3704505
+my $xor;
+$xor ^= $_ for unpack 'C*', $word;
+say "\$$word*$xor"
