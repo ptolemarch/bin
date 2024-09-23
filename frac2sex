@@ -1,5 +1,8 @@
-#! /usr/local/bin/perl
+#! /usr/bin/env perl
 #perl -le'$x=eval shift;print int($x*=60)while$x-=int$x'
+
+# this only converts the fractional part
+# it ignores the integer part
 
 use warnings;
 use strict;
