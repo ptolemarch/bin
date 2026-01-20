@@ -1,0 +1,9 @@
+#! /usr/bin/env perl
+use 5.40.0;
+use open qw/:std :utf8/;
+
+#perl -CSD -E 'say "\e]66;s=7;\x{F800}     \a\n\n\n\n\n\n"'
+
+my $size = shift // 7;
+
+print "\e]66;s=$size;\x{F800}\a", "\n"x$size;
